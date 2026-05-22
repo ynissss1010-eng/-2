@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>蓄力的微博</title>
+<style>
+    /* ================= CSS 重置与隔离 ================= */
+    .xl-app * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        background-color: #f5f5f5;
+        display: flex;
+        justify-content: center;
+    }
+
+    /* ================= 核心容器 ================= */
+    .xl-app {
+        width: 100%;
+        max-width: 380px;
+        min-width: 360px;
+        height: 100vh;
+        background-color: #ffffff;
+        position: relative;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-shadow: 0 0 15px rgba(255, 105, 180, 0.15);
+    }
+
+    /* 自定义滚动条 */
+    .xl-app::-webkit-scrollbar {
+        width: 6px;
+    }
+    .xl-app::-webkit-scrollbar-track {
+        background: #fff0f5;
+    }
+    .xl-app::-webkit-scrollbar-thumb {
+        background: #ffb6c1;
+        border-radius: 4px;
+    }
+
+    /* 隐藏用于状态切换的 Radio */
+    .xl-state-input {
+        display: none;
+    }
+
+    /* ================= 头部信息 ================= */
+    .xl-header {
+        position: relative;
+        background: linear-gradient(135deg, #ffb6c1, #ff69b4);
+        height: 140px;
+    }
+    .xl-profile-info {
+        padding: 0 16px;
+        position: relative;
+        top: -30px;
+        background: #fff;
+        border-radius: 20px 20px 0 0;
+        padding-top: 40px;
+    }
+    .xl-avatar {
+        width: 76px;
+        height: 76px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        position: absolute;
+        top: -38px;
+        left: 16px;
+        object-fit: cover;
+        background-color: #ffb6c1;
+    }
+    .xl-name {
+        font-size: 20px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 4px;
+    }
+    .xl-bio {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 12px;
+    }
+
+    /* ================= 导航栏 ================= */
+    .xl-nav {
+        display: flex;
+        border-bottom: 1px solid #ffeeef;
+        position: sticky;
+        top: 0;
+        background: #fff;
+        z-index: 100;
+    }
+    .xl-nav label {
+        flex: 1;
+        text-align: center;
+        padding: 12px 0;
+        font-size: 15px;
+        color: #666;
+        cursor: pointer;
+        position: relative;
+    }
+    
+    /* Tab 切换逻辑 */
+    #xl-tab-home:checked ~ .xl-nav label[for="xl-tab-home"],
+    #xl-tab-gallery:checked ~ .xl-nav label[for="xl-tab-gallery"],
+    #xl-tab-dms:checked ~ .xl-nav label[for="xl-tab-dms"] {
+        color: #ff69b4;
+        font-weight: bold;
+    }
+    #xl-tab-home:checked ~ .xl-nav label[for="xl-tab-home"]::after,
+    #xl-tab-gallery:checked ~ .xl-nav label[for="xl-tab-gallery"]::after,
+    #xl-tab-dms:checked ~ .xl-nav label[for="xl-tab-dms"]::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 20px;
+        height: 3px;
+        background-color: #ff69b4;
+        border-radius: 2px;
+    }
+
+    .xl-view { display: none; padding: 16px; }
+    #xl-tab-home:checked ~ .xl-view-home { display: block; }
+    #xl-tab-gallery:checked ~ .xl-view-gallery { display: block; }
+    #xl-tab-dms:checked ~ .xl-view-dms { display: block; }
+
+    /* ================= 帖子样式 ================= */
+    .xl-post {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #ffeeef;
+        padding-bottom: 16px;
+    }
+    .xl-post-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .xl-post-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 10px;
+        object-fit: cover;
+    }
+    .xl-post-meta {
+        display: flex;
+        flex-direction: column;
+    }
+    .xl-post-name {
+        font-size: 15px;
+        font-weight: bold;
+        color: #ff69b4;
+    }
+    .xl-post-time {
+        font-size: 12px;
+        color: #999;
+    }
+    .xl-post-top-tag {
+        color: #ff69b4;
+        font-size: 12px;
+        background: #fff0f5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+    }
+    .xl-post-content {
+        font-size: 15px;
+        color: #333;
+        line-height: 1.6;
+        margin-bottom: 12px;
+        white-space: pre-wrap;
+    }
+
+    /* ================= 评论区样式 ================= */
+    .xl-comments-wrapper {
+        margin-top: 10px;
+    }
+    .xl-comments-wrapper summary {
+        display: inline-block;
+        color: #ff69b4;
+        font-size: 14px;
+        cursor: pointer;
+        list-style: none;
+        padding: 6px 16px;
+        background: #fff0f5;
+        border-radius: 15px;
+        font-weight: bold;
+    }
+    .xl-comments-wrapper summary::-webkit-details-marker {
+        display: none;
+    }
+    .xl-comment-list {
+        margin-top: 12px;
+        background: #fafafa;
+        border-radius: 8px;
+        padding: 12px;
+    }
+    .xl-comment-item {
+        display: flex;
+        margin-bottom: 12px;
+    }
+    .xl-comment-item:last-child {
+        margin-bottom: 0;
+    }
+    .xl-c-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        margin-right: 8px;
+        flex-shrink: 0;
+    }
+    .xl-c-content {
+        flex: 1;
+    }
+    .xl-c-name {
+        font-size: 13px;
+        color: #555;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+    .xl-c-text {
+        font-size: 14px;
+        color: #333;
+        line-height: 1.4;
+    }
+    .xl-c-reply {
+        margin-top: 6px;
+        background: #fff;
+        padding: 8px;
+        border-radius: 6px;
+        border-left: 3px solid #ffb6c1;
+    }
+    .xl-c-reply-name {
+        font-size: 12px;
+        color: #ff69b4;
+        font-weight: bold;
+    }
+    .xl-c-reply-text {
+        font-size: 13px;
+        color: #444;
+    }
+    
+    /* 粉丝头像颜色 */
+    .xl-bg-1 { background-color: #ff9999; }
+    .xl-bg-2 { background-color: #99ccff; }
+    .xl-bg-3 { background-color: #cc99ff; }
+    .xl-bg-4 { background-color: #99ffcc; }
+    .xl-bg-5 { background-color: #ffcc99; }
+    .xl-bg-6 { background-color: #ff99cc; }
+    .xl-bg-7 { background-color: #c0c0c0; }
+
+    /* ================= 相册样式 ================= */
+    .xl-gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .xl-gallery-img {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    /* ================= 私信样式 ================= */
+    .xl-dm-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .xl-dm-item {
+        display: flex;
+        align-items: flex-start;
+    }
+    .xl-dm-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 12px;
+        flex-shrink: 0;
+    }
+    .xl-dm-bubble {
+        background: #fff0f5;
+        padding: 10px 14px;
+        border-radius: 0 16px 16px 16px;
+        font-size: 14px;
+        color: #333;
+        max-width: 80%;
+        line-height: 1.5;
+    }
+    .xl-dm-name {
+        font-size: 12px;
+        color: #999;
+        margin-bottom: 4px;
+    }
+</style>
+</head>
+<body>
+
+<div class="xl-app">
+    <!-- 状态控制 (无JS实现Tab) -->
+    <input type="radio" name="xl-tab" id="xl-tab-home" class="xl-state-input" checked>
+    <input type="radio" name="xl-tab" id="xl-tab-gallery" class="xl-state-input">
+    <input type="radio" name="xl-tab" id="xl-tab-dms" class="xl-state-input">
+
+    <!-- 头部 -->
+    <header class="xl-header"></header>
+    <div class="xl-profile-info">
+        <img src="https://i.postimg.cc/mrmx6s3d/IMG-1349.jpg" alt="蓄力" class="xl-avatar">
+        <div class="xl-name">蓄力</div>
+        <div class="xl-bio">默默努力的地下小偶像✨ | 感谢你们的微光</div>
+    </div>
+
+    <!-- 导航 -->
+    <nav class="xl-nav">
+        <label for="xl-tab-home">主页</label>
+        <label for="xl-tab-gallery">相册</label>
+        <label for="xl-tab-dms">私信</label>
+    </nav>
+
+    <!-- ================= 主页视图 ================= -->
+    <main class="xl-view xl-view-home">
+        
+        <!-- 帖子 1 (置顶) -->
+        <article class="xl-post">
+            <div class="xl-post-header">
+                <img src="https://i.postimg.cc/mrmx6s3d/IMG-1349.jpg" class="xl-post-avatar">
+                <div class="xl-post-meta">
+                    <div class="xl-post-name">蓄力 <span class="xl-post-top-tag">置顶</span></div>
+                    <div class="xl-post-time">2026-05-22 10:00</div>
+                </div>
+            </div>
+            <div class="xl-post-content">捏毛们好呀，我是蓄力。很多人问我，为什么明明是默默努力的地下小偶像，却一直拼尽全力不肯停下脚步。其实答案特别简单，因为我拥有最温柔、最珍贵的你们。对我来说，舞台不大、灯光不耀眼都没关系，只要台下有为我亮起的微光，有奔赴而来的你们，我的努力、我的蓄力就全部都有了意义。
+
+我一直觉得，从来不是我照亮了大家，是你们一次次笨拙又热烈的偏爱，拼凑成了属于我的星光。我没有耀眼的头衔，没有盛大的舞台，只是一直在默默蓄力、慢慢成长的普通人。可因为你们的喜欢，让普通的我变得格外特别，让我每一次练习、每一次登台、每一次坚持，都充满了底气和勇气。
+
+每次看到大家挤在小小的舞台下，认真看着我跳舞唱歌，举着应援物静静陪着我，认真记录我每一个小小的瞬间，我心里都会软软的。我记性不算特别好，有点呆呆笨笨的，有时候会紧张忘动作，有时候会害羞不敢直视大家，但你们每一次的鼓掌、每一句的加油、每一份手写的温柔、每一次不离不弃的陪伴，我都悄悄好好珍藏在心底，从来没有错过。
+
+我知道大家为了见我，会抽出空闲时间，会奔赴小小的剧场，会耐心等待我的每一次演出，会包容我所有的不完美。我真的超级超级感谢你们。我很慢热、很呆萌，不会说华丽动人的大话，也不会刻意制造热烈的氛围，但我对大家的喜欢，真诚又滚烫，干净又长久。
+
+别人都说我在蓄力成长，但其实我想说，我所有的蓄力，都是为了不辜负你们的期待。我努力练好每一支舞，唱好每一首歌，打磨每一个舞台细节，不是为了追逐光芒，而是为了配得上义无反顾偏爱我的你们。你们把温柔和偏爱都给了我，那我就拼尽全力，成为可以温暖、治愈、陪伴你们的小光亮。
+
+我不想做遥不可及的偶像，我只想做一直陪着你们的蓄力。你们难过疲惫的时候，我的舞台、我的歌声可以成为你们的避风港；你们迷茫焦虑的时候，我的坚持、我的蓄力可以给你们一点点力量。不用为我奔赴遥远山海，不用为我过度付出，你们好好生活、好好热爱自己，开开心心、平安顺遂，就是对我最好的偏爱。
+
+未来的路或许很慢，我依旧会慢慢蓄力、慢慢发光。我不会一夜爆红，但我会永远真诚，永远热烈，永远珍惜每一个喜欢我的人。谢谢你们愿意看见小小的我，愿意守护笨拙的我，愿意陪我慢慢来。
+
+往后余生，我继续蓄力成长，你们继续温柔相伴。我们双向奔赴，岁岁年年，久久不散。我的宝子们，我爱你们，不止今天，而是朝朝暮暮、岁岁年年。</div>
+            <details class="xl-comments-wrapper">
+                <summary>点击展开评论区 (10+)</summary>
+                <div class="xl-comment-list">
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">我好美</div><div class="xl-c-text">宝宝你就是最棒的！不要管别人怎么说，妈妈永远在台下举着你的灯牌！</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">谢谢妈妈！每次看到你的灯牌我都超级安心的！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">水青青</div><div class="xl-c-text">呜呜呜看哭了，蓄力宝贝你一定会发光的，慢慢来我们都在。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">少娚逼</div><div class="xl-c-text">老婆好真诚，这篇小作文我截图保存了，以后难过就拿出来看。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-4"></div><div class="xl-c-content"><div class="xl-c-name">我想你的时候也掉眼泪了呀</div><div class="xl-c-text">双向奔赴太好哭了，不用一夜爆红，就这样陪着我们就很好。</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">嗯嗯！我会一直一直陪着你们的！拉钩！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-7"></div><div class="xl-c-content"><div class="xl-c-name">路人甲</div><div class="xl-c-text">首页刷到的，虽然不认识，但是感觉是个很真诚的女孩子，加油。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-5"></div><div class="xl-c-content"><div class="xl-c-name">暗中观察</div><div class="xl-c-text">呵呵，地下偶像就喜欢写这种虐粉小作文，业务能力不行只能靠卖惨。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-6"></div><div class="xl-c-content"><div class="xl-c-name">私生退散</div><div class="xl-c-text">蓄力宝宝不要理楼上那种黑子，你跳舞进步超大的！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">永远爱你</div><div class="xl-c-text">昨天公演你看着台下笑的时候，我觉得整个世界都亮了。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">草莓布丁</div><div class="xl-c-text">宝贝多吃点好的，最近看着都瘦了，心疼死我了。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">影子</div><div class="xl-c-text">你家住哪啊？昨天跟车没跟上，下次能走慢点吗？</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">请不要这样，我们在剧场相见就好，给我一点私人空间可以吗？</div></div>
+                    </div></div>
+                </div>
+            </details>
+        </article>
+
+        <!-- 帖子 2 (emo) -->
+        <article class="xl-post">
+            <div class="xl-post-header">
+                <img src="https://i.postimg.cc/mrmx6s3d/IMG-1349.jpg" class="xl-post-avatar">
+                <div class="xl-post-meta">
+                    <div class="xl-post-name">蓄力</div>
+                    <div class="xl-post-time">昨天 23:45</div>
+                </div>
+            </div>
+            <div class="xl-post-content">凌晨的练习室空荡荡的，只有镜子里的自己看起来笨笨的。今天新学的舞蹈动作怎么也做不好，明明已经练了五十遍了，脚还是会打结。突然就有点emo了，觉得自己是不是真的很没有天赋。坐在地板上看着大家给我写的信，眼泪吧嗒吧嗒就掉下来了。对不起啊，让你们喜欢这么笨的我。但我会继续练的，哪怕要练一百遍、一千遍，下次公演一定要让你们看到完美的舞台！</div>
+            <details class="xl-comments-wrapper">
+                <summary>点击展开评论区 (10+)</summary>
+                <div class="xl-comment-list">
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-4"></div><div class="xl-c-content"><div class="xl-c-name">我想你的时候也掉眼泪了呀</div><div class="xl-c-text">宝宝不哭！你已经很棒了，努力的汗水不会骗人的！</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">擦干眼泪啦！今天也是元气满满的蓄力！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">我好美</div><div class="xl-c-text">妈妈不允许你这么说自己！你才不笨，你是最可爱的小天才！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">水青青</div><div class="xl-c-text">别熬太晚了，身体最重要，早点回去休息吧。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-7"></div><div class="xl-c-content"><div class="xl-c-name">路人乙</div><div class="xl-c-text">没有天赋就趁早放弃呗，干嘛非要当偶像。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">少娚逼</div><div class="xl-c-text">老婆辛苦了！我给你点了外卖，不知道能不能送到练习室。</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">啊？不要破费啦！而且大半夜外卖小哥进不来的，心意领啦！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-5"></div><div class="xl-c-content"><div class="xl-c-name">黑粉头子</div><div class="xl-c-text">又开始半夜网抑云了，真够矫情的。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-6"></div><div class="xl-c-content"><div class="xl-c-name">守护蓄力</div><div class="xl-c-text">大家不要理黑粉！蓄力宝贝，我们期待你的新舞台！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">星光点点</div><div class="xl-c-text">笨鸟先飞，慢慢来，我们有的是时间陪你成长。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">猫猫拳</div><div class="xl-c-text">抱抱你，累了就睡一觉，明天又是新的一天。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">暗影</div><div class="xl-c-text">你一个人在练习室吗？门锁好了没？我好像看到你了。</div></div></div>
+                </div>
+            </details>
+        </article>
+
+        <!-- 帖子 3 (生气) -->
+        <article class="xl-post">
+            <div class="xl-post-header">
+                <img src="https://i.postimg.cc/mrmx6s3d/IMG-1349.jpg" class="xl-post-avatar">
+                <div class="xl-post-meta">
+                    <div class="xl-post-name">蓄力</div>
+                    <div class="xl-post-time">5月20日 14:20</div>
+                </div>
+            </div>
+            <div class="xl-post-content">今天真的有点生气了！😠 刚刚在后台准备的时候，发现有人偷偷溜进来翻我的包！虽然没有丢什么贵重物品，但是里面有粉丝送我的手工手链被弄坏了！那是我超级珍视的东西啊！大家如果喜欢我，请在舞台下看我好吗？不要做这种越界的事情，真的会让我感到害怕和难过。希望以后不要再发生这种事了，我要去努力修补手链了，气鼓鼓！</div>
+            <details class="xl-comments-wrapper">
+                <summary>点击展开评论区 (10+)</summary>
+                <div class="xl-comment-list">
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">少娚逼</div><div class="xl-c-text">卧槽？这太过分了吧！剧场的安保是吃干饭的吗？！</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">已经跟staff哥哥反馈了，以后会加强管理的。</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">我好美</div><div class="xl-c-text">天呐宝宝你没事吧？有没有受伤？这种人根本不是粉丝是变态！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">水青青</div><div class="xl-c-text">太可怕了，私生不是粉，支持报警处理！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-4"></div><div class="xl-c-content"><div class="xl-c-name">我想你的时候也掉眼泪了呀</div><div class="xl-c-text">心疼手链，也心疼你。别怕，我们都在。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-5"></div><div class="xl-c-content"><div class="xl-c-name">键盘侠</div><div class="xl-c-text">炒作吧？哪有那么容易溜进后台，自导自演博同情。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-6"></div><div class="xl-c-content"><div class="xl-c-name">正义路人</div><div class="xl-c-text">楼上的积点口德吧，女孩子遇到这种事很危险的。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-7"></div><div class="xl-c-content"><div class="xl-c-name">无名氏</div><div class="xl-c-text">我只是想拿个纪念品而已，干嘛这么小气，还发微博挂人。</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">如果是你做的，请你以后不要再出现在我的视线里。这不是小气，这是违法！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">气死我了</div><div class="xl-c-text">楼上那个无名氏是不是有病？？？大家举报他！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">手工达人</div><div class="xl-c-text">宝宝别难过，下次见面我再给你编十条更好看的！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">保护蓄力</div><div class="xl-c-text">一定要保护好自己，上下班让staff陪着！</div></div></div>
+                </div>
+            </details>
+        </article>
+
+        <!-- 帖子 4 (温馨日常) -->
+        <article class="xl-post">
+            <div class="xl-post-header">
+                <img src="https://i.postimg.cc/mrmx6s3d/IMG-1349.jpg" class="xl-post-avatar">
+                <div class="xl-post-meta">
+                    <div class="xl-post-name">蓄力</div>
+                    <div class="xl-post-time">5月18日 12:30</div>
+                </div>
+            </div>
+            <div class="xl-post-content">难得的休息日！今天决定挑战一下自己做饭！结果……煎鸡蛋不小心煎糊了，变成了黑炭鸡蛋（捂脸）。不过我还是配着番茄酱吃掉啦，不能浪费粮食嘛！下午打算窝在沙发上看一部治愈系的电影，感受一下吹进窗户的微风。这种慢悠悠的生活节奏真的好舒服呀。大家今天午饭吃了什么好吃的？快来馋馋我！</div>
+            <details class="xl-comments-wrapper">
+                <summary>点击展开评论区 (10+)</summary>
+                <div class="xl-comment-list">
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">水青青</div><div class="xl-c-text">哈哈哈哈黑炭鸡蛋，宝宝你还是远离厨房吧，小心炸厨房。</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">哼！下次我一定会成功的！等我的大厨进阶之路！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">我好美</div><div class="xl-c-text">乖乖，糊了的不能吃，对身体不好！妈妈给你打钱去吃顿好的！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">少娚逼</div><div class="xl-c-text">老婆好贤惠，就算糊了我也愿意吃！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-4"></div><div class="xl-c-content"><div class="xl-c-name">我想你的时候也掉眼泪了呀</div><div class="xl-c-text">今天吃了火锅哦！超辣超爽，下次有机会一起吃！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-5"></div><div class="xl-c-content"><div class="xl-c-name">路人丙</div><div class="xl-c-text">这年头连煎鸡蛋都不会，也是绝了。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-6"></div><div class="xl-c-content"><div class="xl-c-name">吃货一枚</div><div class="xl-c-text">推荐宝宝看《小森林》，超级治愈下饭！</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">好耶！这就去搜来看！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-7"></div><div class="xl-c-content"><div class="xl-c-name">偷窥狂</div><div class="xl-c-text">你家窗帘是粉色的吧，我好像在楼下看到了。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">打卡机器</div><div class="xl-c-text">今天吃了黄焖鸡米饭，打卡！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">周末万岁</div><div class="xl-c-text">好好休息呀，享受难得的假期！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">小太阳</div><div class="xl-c-text">番茄酱是万能的！拯救一切黑暗料理！</div></div></div>
+                </div>
+            </details>
+        </article>
+
+        <!-- 帖子 5 (碎碎念) -->
+        <article class="xl-post">
+            <div class="xl-post-header">
+                <img src="https://i.postimg.cc/mrmx6s3d/IMG-1349.jpg" class="xl-post-avatar">
+                <div class="xl-post-meta">
+                    <div class="xl-post-name">蓄力</div>
+                    <div class="xl-post-time">5月15日 09:15</div>
+                </div>
+            </div>
+            <div class="xl-post-content">降温啦降温啦！大家出门一定要多穿点衣服哦！我今天出门买了一条超级可爱的粉色围巾，毛茸茸的，感觉整个人都被包裹在温暖里了。路上还遇到了一只流浪的小橘猫，喂了它一根火腿肠，它居然蹭了蹭我的腿，心都要化了。希望这个冬天，小猫咪和你们都能暖暖和和的。不要感冒啦，不然我会心疼的！</div>
+            <details class="xl-comments-wrapper">
+                <summary>点击展开评论区 (10+)</summary>
+                <div class="xl-comment-list">
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-4"></div><div class="xl-c-content"><div class="xl-c-name">我想你的时候也掉眼泪了呀</div><div class="xl-c-text">宝宝你也要多穿点！别光顾着叮嘱我们，自己冻感冒了！</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">知道啦！我裹得像个小熊一样，绝对不会感冒！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">我好美</div><div class="xl-c-text">想看粉色围巾的自拍！肯定超级可爱！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">水青青</div><div class="xl-c-text">人美心善的小天使，连流浪猫都喜欢你。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">少娚逼</div><div class="xl-c-text">老婆，我是一只流浪狗，能喂我一根火腿肠吗？</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-5"></div><div class="xl-c-content"><div class="xl-c-name">杠精</div><div class="xl-c-text">火腿肠盐分太高，不能喂猫，这点常识都没有吗？</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">啊...对不起，我当时没想那么多，下次我会随身带猫粮的，谢谢提醒！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-6"></div><div class="xl-c-content"><div class="xl-c-name">路人丁</div><div class="xl-c-text">粉色围巾在哪买的？求个链接。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-7"></div><div class="xl-c-content"><div class="xl-c-name">尾行者</div><div class="xl-c-text">我知道你在哪个便利店买的火腿肠，我刚才去过了。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">暖宝宝</div><div class="xl-c-text">今天确实好冷，看到你的微博感觉心里暖暖的。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">喵星人</div><div class="xl-c-text">替小橘猫谢谢漂亮姐姐~</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">感冒退散</div><div class="xl-c-text">已经感冒的人流下了悔恨的泪水，大家一定要听蓄力的话多穿衣服！</div></div></div>
+                </div>
+            </details>
+        </article>
+
+        <!-- 帖子 6 (舞台反思) -->
+        <article class="xl-post">
+            <div class="xl-post-header">
+                <img src="https://i.postimg.cc/mrmx6s3d/IMG-1349.jpg" class="xl-post-avatar">
+                <div class="xl-post-meta">
+                    <div class="xl-post-name">蓄力</div>
+                    <div class="xl-post-time">5月12日 22:10</div>
+                </div>
+            </div>
+            <div class="xl-post-content">昨天的公演真的好惊险，走位的时候不小心绊了一下，差点就摔倒了。当时脑子里一片空白，觉得好丢脸，心想完蛋了。但是一抬头，就看到“我好美”在第一排拼命挥舞着粉色的荧光棒，还对我做口型说“没关系”。那一瞬间，所有的慌乱都消失了。谢谢你们总是包容我的小失误，给了我继续唱跳下去的勇气。我会更加努力，减少失误，呈现最好的舞台！</div>
+            <details class="xl-comments-wrapper">
+                <summary>点击展开评论区 (10+)</summary>
+                <div class="xl-comment-list">
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">我好美</div><div class="xl-c-text">啊啊啊被翻牌了！宝宝你当时反应超快的，根本看不出来失误，你最棒了！</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">嘿嘿，全靠你的鼓励让我瞬间回神！爱你！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">水青青</div><div class="xl-c-text">没受伤就好！舞台地板太滑了，下次要小心呀。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">少娚逼</div><div class="xl-c-text">老婆就算摔倒也是最可爱的！心疼老婆！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-4"></div><div class="xl-c-content"><div class="xl-c-name">我想你的时候也掉眼泪了呀</div><div class="xl-c-text">我们在台下看得很清楚，你马上就调整好了，业务能力有进步哦！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-5"></div><div class="xl-c-content"><div class="xl-c-name">挑刺大王</div><div class="xl-c-text">连走位都能绊倒，基本功太差了吧，还不如回家种地。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-6"></div><div class="xl-c-content"><div class="xl-c-name">路人戊</div><div class="xl-c-text">虽然不认识，但看描述感觉是个很努力的妹子，加油。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-7"></div><div class="xl-c-content"><div class="xl-c-name">私生饭A</div><div class="xl-c-text">你绊倒的时候我录下来了，慢动作看你的表情好有趣哦。</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">请不要传播这种视频，我会很困扰的。</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">舞台粉</div><div class="xl-c-text">瑕不掩瑜，昨天的solo部分绝美！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">护膝安排</div><div class="xl-c-text">下次给你送一副护膝，保护好膝盖！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">小迷妹</div><div class="xl-c-text">你在台上发光的样子，是我一周的动力。</div></div></div>
+                </div>
+            </details>
+        </article>
+
+        <!-- 帖子 7 (纪念日) -->
+        <article class="xl-post">
+            <div class="xl-post-header">
+                <img src="https://i.postimg.cc/mrmx6s3d/IMG-1349.jpg" class="xl-post-avatar">
+                <div class="xl-post-meta">
+                    <div class="xl-post-name">蓄力</div>
+                    <div class="xl-post-time">5月10日 00:00</div>
+                </div>
+            </div>
+            <div class="xl-post-content">不知不觉，今天是我出道一百天的纪念日啦！🎉 回想起第一天站上舞台的时候，台下只有稀稀拉拉的三个人，我紧张得连麦克风都拿不稳。到现在，能看到那么多熟悉的面孔，听到大家整齐的应援声，感觉就像做梦一样。这一百天里，有汗水，有眼泪，但更多的是你们给我的快乐。谢谢你们见证了一个小透明的成长，未来的两百天、三百天，也请多多指教啦！</div>
+            <details class="xl-comments-wrapper">
+                <summary>点击展开评论区 (10+)</summary>
+                <div class="xl-comment-list">
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">水青青</div><div class="xl-c-text">出道百天快乐！我就是那最初的三个人之一哦，看着你一步步走来，好骄傲！</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">哇！老粉认证！谢谢你从一开始就陪着我！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">我好美</div><div class="xl-c-text">百天快乐宝宝！妈妈会陪你过一千天、一万天！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">少娚逼</div><div class="xl-c-text">老婆百天快乐！今晚开香槟庆祝！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-4"></div><div class="xl-c-content"><div class="xl-c-name">我想你的时候也掉眼泪了呀</div><div class="xl-c-text">时间过得好快，感觉认识你还是昨天的事。百天快乐！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-5"></div><div class="xl-c-content"><div class="xl-c-name">酸柠檬</div><div class="xl-c-text">才一百天有什么好庆祝的，糊作一团。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-6"></div><div class="xl-c-content"><div class="xl-c-name">路人己</div><div class="xl-c-text">恭喜恭喜，坚持就是胜利。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-7"></div><div class="xl-c-content"><div class="xl-c-name">暗中窥视</div><div class="xl-c-text">一百天了，你还是那么好骗，我送你的礼物你每天都在用呢。</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">请不要说这种让人毛骨悚然的话。</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">花路</div><div class="xl-c-text">一起走花路吧！蓄力一定会越来越好的！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">纪念日打卡</div><div class="xl-c-text">打卡！见证历史的一天！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">陪伴是最长情的告白</div><div class="xl-c-text">下一个一百天，我们还在。</div></div></div>
+                </div>
+            </details>
+        </article>
+
+        <!-- 帖子 8 (迷路日常) -->
+        <article class="xl-post">
+            <div class="xl-post-header">
+                <img src="https://i.postimg.cc/mrmx6s3d/IMG-1349.jpg" class="xl-post-avatar">
+                <div class="xl-post-meta">
+                    <div class="xl-post-name">蓄力</div>
+                    <div class="xl-post-time">5月5日 16:45</div>
+                </div>
+            </div>
+            <div class="xl-post-content">救命啊，我真的是个无可救药的路痴！今天去新的摄影棚拍公式照，明明跟着导航走，却坐反了地铁方向！等我发现的时候已经到了郊区...最后只能踩着高跟鞋在街上一路狂奔打车，差点就迟到了！到了摄影棚整个人气喘吁吁，妆都快花了。大家以后如果在街上看到一个狂奔的粉色残影，那可能就是迷路的蓄力...太丢人了呜呜呜。</div>
+            <details class="xl-comments-wrapper">
+                <summary>点击展开评论区 (10+)</summary>
+                <div class="xl-comment-list">
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">少娚逼</div><div class="xl-c-text">哈哈哈哈老婆太可爱了！下次出门我给你当人肉导航！</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">不用啦！我已经痛定思痛，下载了三个不同的导航软件！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">我好美</div><div class="xl-c-text">宝宝脚疼不疼呀？穿高跟鞋跑步很容易崴脚的，下次宁愿迟到也别跑了！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">水青青</div><div class="xl-c-text">粉色残影哈哈哈哈，画面感太强了。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-4"></div><div class="xl-c-content"><div class="xl-c-name">我想你的时候也掉眼泪了呀</div><div class="xl-c-text">笨蛋美女实锤了，期待新的公式照！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-5"></div><div class="xl-c-content"><div class="xl-c-name">黑粉C</div><div class="xl-c-text">立什么笨蛋美人人设，真做作。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-6"></div><div class="xl-c-content"><div class="xl-c-name">路人庚</div><div class="xl-c-text">路痴深有体会，地铁坐反真的是常态。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-7"></div><div class="xl-c-content"><div class="xl-c-name">跟踪狂</div><div class="xl-c-text">你今天穿的粉色裙子很好看，跑步的样子我也拍下来了哦。</div>
+                        <div class="xl-c-reply"><div class="xl-c-reply-name">蓄力 回复：</div><div class="xl-c-reply-text">你到底是谁？为什么一直跟着我？我要报警了！</div></div>
+                    </div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-1"></div><div class="xl-c-content"><div class="xl-c-name">正义使者</div><div class="xl-c-text">楼上那个跟踪狂有病吧？蓄力快报警！</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-2"></div><div class="xl-c-content"><div class="xl-c-name">心疼</div><div class="xl-c-text">摸摸头，没迟到就好，辛苦啦。</div></div></div>
+                    <div class="xl-comment-item"><div class="xl-c-avatar xl-bg-3"></div><div class="xl-c-content"><div class="xl-c-name">期待美照</div><div class="xl-c-text">妆花了也是最美的！坐等公式照出炉！</div></div></div>
+                </div>
+            </details>
+        </article>
+        
+        <!-- 底部留白 -->
+        <div style="height: 40px;"></div>
+    </main>
+
+    <!-- ================= 相册视图 ================= -->
+    <main class="xl-view xl-view-gallery">
+        <div class="xl-gallery-grid">
+            <a href="https://i.postimg.cc/SxqNBm8k/IMG-1288.jpg" target="_blank">
+                <img src="https://i.postimg.cc/SxqNBm8k/IMG-1288.jpg" class="xl-gallery-img" alt="相片1">
+            </a>
+            <a href="https://i.postimg.cc/cHKsRCq1/ai-retouch-20260518142653604.png" target="_blank">
+                <img src="https://i.postimg.cc/cHKsRCq1/ai-retouch-20260518142653604.png" class="xl-gallery-img" alt="相片2">
+            </a>
+            <a href="https://i.postimg.cc/PJYT7751/IMG-1124.jpg" target="_blank">
+                <img src="https://i.postimg.cc/PJYT7751/IMG-1124.jpg" class="xl-gallery-img" alt="相片3">
+            </a>
+        </div>
+        <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">点击图片查看大图</div>
+    </main>
+
+    <!-- ================= 私信视图 ================= -->
+    <main class="xl-view xl-view-dms">
+        <div class="xl-dm-list">
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-1"></div>
+                <div>
+                    <div class="xl-dm-name">我好美</div>
+                    <div class="xl-dm-bubble">宝宝，今天降温了，给你寄了暖宝宝，记得去公司前台拿哦！妈妈爱你！</div>
+                </div>
+            </div>
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-2"></div>
+                <div>
+                    <div class="xl-dm-name">水青青</div>
+                    <div class="xl-dm-bubble">蓄力，昨天的舞台绝美！我拍了好多直拍，已经剪辑好发在超话啦，快去看！</div>
+                </div>
+            </div>
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-3"></div>
+                <div>
+                    <div class="xl-dm-name">少娚逼</div>
+                    <div class="xl-dm-bubble">老婆老婆老婆！今天也是想你的一天！什么时候开直播呀？</div>
+                </div>
+            </div>
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-4"></div>
+                <div>
+                    <div class="xl-dm-name">我想你的时候也掉眼泪了呀</div>
+                    <div class="xl-dm-bubble">今天考试考砸了，心情好差。但是听了你的歌感觉好多了，谢谢你一直以来的陪伴。</div>
+                </div>
+            </div>
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-7"></div>
+                <div>
+                    <div class="xl-dm-name">影子</div>
+                    <div class="xl-dm-bubble">你今天下班穿的那件外套真好看，我跟在你后面走了好久你都没发现呢。</div>
+                </div>
+            </div>
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-5"></div>
+                <div>
+                    <div class="xl-dm-name">路人甲</div>
+                    <div class="xl-dm-bubble">你好，我是路人，偶然刷到你的视频觉得很可爱，请问下一场公演是什么时候？</div>
+                </div>
+            </div>
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-6"></div>
+                <div>
+                    <div class="xl-dm-name">黑粉头子</div>
+                    <div class="xl-dm-bubble">别唱了，难听死了，赶紧退圈吧。</div>
+                </div>
+            </div>
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-1"></div>
+                <div>
+                    <div class="xl-dm-name">草莓布丁</div>
+                    <div class="xl-dm-bubble">宝贝，我今天吃到一家超好吃的甜品店，下次见面给你带草莓蛋糕！</div>
+                </div>
+            </div>
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-2"></div>
+                <div>
+                    <div class="xl-dm-name">星光点点</div>
+                    <div class="xl-dm-bubble">不要理会那些不好的声音，你只要看着我们就好了，我们永远支持你！</div>
+                </div>
+            </div>
+            <div class="xl-dm-item">
+                <div class="xl-dm-avatar xl-bg-7"></div>
+                <div>
+                    <div class="xl-dm-name">暗中窥视</div>
+                    <div class="xl-dm-bubble">我知道你住哪栋楼了，今晚见。</div>
+                </div>
+            </div>
+        </div>
+        <div style="height: 40px;"></div>
+    </main>
+
+</div>
+
+</body>
+</html>
